@@ -1,5 +1,4 @@
-> [!WARNING]
-> **Disclaimer**
+> [!WARNING] Disclaimer
 >
 > This project is provided for authorized security research, education, and defensive
 > testing only. All hostnames are under the reserved `*.decert.test` domain, and all
