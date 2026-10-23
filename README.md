@@ -9,8 +9,23 @@
 并输出可核验的证据。
 
 > [!WARNING]
-> 本项目仅供安全学习与防御研究。所有域名位于 `*.decert.test`，证书均由本地生成，
-> 不连接任何真实网站。请勿将其中材料用于任何未授权的系统或网络。
+> **Disclaimer**
+>
+> This project is provided for authorized security research, education, and defensive
+> testing only. All hostnames are under the reserved `*.decert.test` domain, and all
+> certificates are generated locally; the project does not connect to any live service.
+>
+> The software is provided "as is", without warranty of any kind, express or implied,
+> including but not limited to the warranties of merchantability, fitness for a
+> particular purpose, and non-infringement. In no event shall the authors or copyright
+> holders be liable for any claim, damages, or other liability, whether in an action of
+> contract, tort, or otherwise, arising from, out of, or in connection with the software
+> or its use.
+>
+> You are solely responsible for ensuring that any use complies with applicable laws
+> and regulations and that you have obtained the necessary authorization. Unauthorized
+> interception, decryption, or impersonation of communications is illegal in most
+> jurisdictions.
 
 ## 1. 快速开始
 
@@ -97,51 +112,46 @@ make clean    # 连生成物一起删除
 
 ## 6. 影响范围
 
-判定标准只有一条：**该平台的信任库里是否仍包含 `emSign ECC Root CA - G3`**。
+判断某台设备是否受影响，只看一件事：**它的信任库里是否仍包含 `emSign ECC Root CA - G3`**。
 
-| 平台 | 状态 |
+| 时间 | 事件 |
 |---|---|
-| macOS / iOS | ⚠️ 仍包含，未修复 |
-| Android | ⚠️ 仍包含，未修复 |
-| Windows | 随系统更新下发，需逐机确认 |
-| Debian 12 | 取决于 `ca-certificates` 版本 |
-| Ubuntu / Alpine | 不含，不受影响 |
-| Java / JDK、Kotlin、Gradle | ⚠️ 仍包含，未修复 |
-| Python（`certifi`） | 已修复：`2026.10.18` 起移除 |
-| Node.js、Rust（rustls） | 不含，不受影响 |
-| Go、Dart / Flutter、curl | 使用系统信任库，状态跟随平台 |
-| Firefox | 已修复（OneCRL） |
+| 2018-02 | `emSign ECC Root CA - G3` 签发，有效期至 2043 年 |
+| 2019-03 | Python `certifi` 开始收录该根 |
+| 2025-04-30 | 8 张弱私钥中间 CA 签发，事故根源形成 |
+| 2026-10-17 | 研究者上报 Mozilla；Firefox 当天下发 OneCRL 拉黑 |
+| 2026-10-18 | `certifi` 移除该根 |
+| 2026-10-20 | Mozilla 从 NSS 信任库移除该根 |
 
-**时间窗口**：`emSign ECC Root CA - G3` 于 2018-02 签发，事故发生在 2025-04-30，
-2026-10-17 被上报，Firefox 当天下发 OneCRL，Mozilla 于 10-20 从信任库移除该根。
-Python 生态受影响区间为 `certifi 2019.3.9` 至 `2026.10.18` 之前。
+**受影响**：macOS、iOS、Android，以及 JDK / Kotlin / Gradle（自带 `cacerts`）——
+它们的信任库中仍有该根。旧版 Debian 12、旧版 `certifi`（`2026.10.18` 之前）同样在内。
 
-**自查**：
+**不受影响**：Ubuntu、Alpine、Node.js、Rust（rustls）、Firefox，以及已升级的 `certifi`。
+
+**跟随系统**：Go、Dart / Flutter、curl 使用系统信任库，状态取决于所在平台；
+Windows 随系统更新下发，需逐机确认。
+
+自查方法：在该平台搜索信任库中是否存在 `emSign ECC Root CA - G3`。
 
 ```bash
 # Linux
 awk '/BEGIN CERT/{n++} {print > ("/tmp/q" n ".pem")}' /etc/ssl/certs/ca-certificates.crt
-for f in /tmp/q*.pem; do openssl x509 -in $f -noout -subject | grep -q 'emSign ECC Root CA - G3' && echo "受影响"; done
+for f in /tmp/q*.pem; do openssl x509 -in $f -noout -subject | grep -q 'emSign ECC Root CA - G3' && echo 受影响; done
 
 # Python
-python3 -c "import certifi,re;b=open(certifi.where()).read();print('受影响' if re.search('emSign ECC Root CA - G3',b) else '不受影响', certifi.__version__)"
+python3 -c "import certifi,re;b=open(certifi.where()).read();print('受影响' if re.search('emSign ECC Root CA - G3',b) else '不受影响')"
 
 # Java / Kotlin / Gradle
 keytool -list -keystore "$JAVA_HOME/lib/security/cacerts" -storepass changeit | grep -i emsign
 
 # macOS
-security find-certificate -a -c "emSign" /System/Library/Keychains/SystemRootCertificates.keychain | grep -c alis
-
-# Android
-adb shell find /system/etc/security/cacerts -type f -exec sh -c 'openssl x509 -in "$1" -noout -subject 2>/dev/null | grep -q emSign' _ {} \;
+security find-certificate -a -c emSign /System/Library/Keychains/SystemRootCertificates.keychain
 
 # Windows (PowerShell)
-Get-ChildItem Cert:\LocalMachine\Root, Cert:\CurrentUser\Root | Where-Object { $_.Subject -like '*emSign*' }
+Get-ChildItem Cert:\LocalMachine\Root | Where-Object Subject -like '*emSign*'
 ```
 
-**处置**：优先移除根证书或升级信任库；无法升级的设备使用证书固定（pinning）或 mTLS。
-Java 可用 `keytool -delete -alias cn_emsign_ecc_root_ca__g3`；Python 执行
-`pip install -U "certifi>=2026.10.18"`。
+处置：移除该根或升级信任库；无法升级的设备使用证书固定（pinning）或 mTLS。
 
 ## 7. 参考
 
