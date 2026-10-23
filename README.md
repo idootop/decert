@@ -2,12 +2,6 @@
 
 **Hunt legacy devices with broken trust anchors.**
 
-2026 年 10 月，印度证书机构 eMudhra 有 8 张中间 CA 证书的私钥过短，最小的仅等于整数 `4`。
-这类私钥可直接从公开证书还原，进而为任意域名签发能通过正常校验的证书。
-
-`decert` 在本地复现这条攻击链：还原私钥、签发伪造证书、拦截并篡改 HTTPS 流量，
-并输出可核验的证据。
-
 > [!WARNING]
 > **Disclaimer**
 >
@@ -26,6 +20,12 @@
 > and regulations and that you have obtained the necessary authorization. Unauthorized
 > interception, decryption, or impersonation of communications is illegal in most
 > jurisdictions.
+
+2026 年 10 月，印度证书机构 eMudhra 有 8 张中间 CA 证书的私钥过短，最小的仅等于整数 `4`。
+这类私钥可直接从公开证书还原，进而为任意域名签发能通过正常校验的证书。
+
+`decert` 在本地复现这条攻击链：还原私钥、签发伪造证书、拦截并篡改 HTTPS 流量，
+并输出可核验的证据。
 
 ## 1. 快速开始
 
