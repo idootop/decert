@@ -1,0 +1,20 @@
+# 运行时生成，绝不入库
+lab/cas/
+evidence/
+lab/mitm/mitmproxy-ca.pem
+lab/mitm/ca.key
+lab/mitm/mitmproxy-dhparam.pem
+.pids/
+.proxy.pid
+
+# uv / Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
+*.swp

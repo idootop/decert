@@ -1,0 +1,3 @@
+# 攻击者的正向代理镜像：内置 mitmproxy，随项目一起构建
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+RUN uv pip install --system mitmproxy

@@ -1,0 +1,9 @@
+# 旧客户端：信任库里含 emSign ECC Root CA - G3（事件发生前的状态）
+ARG BASE=debian:12-slim
+FROM ${BASE}
+RUN apt-get update -q \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+      python3 python3-cryptography ca-certificates
+RUN rm -rf /var/lib/apt/lists/*
+COPY g3-root.pem /usr/local/share/ca-certificates/emSign_ECC_Root_CA_-_G3.crt
+RUN update-ca-certificates
