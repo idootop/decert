@@ -1,22 +1,3 @@
-> [!WARNING]
-> **Disclaimer**
->
-> This project is provided for authorized security research, education, and defensive
-> testing only. All hostnames are under the reserved `*.decert.test` domain, and all
-> certificates are generated locally; the project does not connect to any live service.
->
-> The software is provided "as is", without warranty of any kind, express or implied,
-> including but not limited to the warranties of merchantability, fitness for a
-> particular purpose, and non-infringement. In no event shall the authors or copyright
-> holders be liable for any claim, damages, or other liability, whether in an action of
-> contract, tort, or otherwise, arising from, out of, or in connection with the software
-> or its use.
->
-> You are solely responsible for ensuring that any use complies with applicable laws
-> and regulations and that you have obtained the necessary authorization. Unauthorized
-> interception, decryption, or impersonation of communications is illegal in most
-> jurisdictions.
-
 # decert
 
 **Hunt legacy devices with broken trust anchors.**
@@ -152,6 +133,25 @@ Get-ChildItem Cert:\LocalMachine\Root | Where-Object Subject -like '*emSign*'
 ```
 
 处置：移除该根或升级信任库；无法升级的设备使用证书固定（pinning）或 mTLS。
+
+> [!WARNING]
+> **Disclaimer**
+>
+> This project is provided for authorized security research, education, and defensive
+> testing only. All hostnames are under the reserved `*.decert.test` domain, and all
+> certificates are generated locally; the project does not connect to any live service.
+>
+> The software is provided "as is", without warranty of any kind, express or implied,
+> including but not limited to the warranties of merchantability, fitness for a
+> particular purpose, and non-infringement. In no event shall the authors or copyright
+> holders be liable for any claim, damages, or other liability, whether in an action of
+> contract, tort, or otherwise, arising from, out of, or in connection with the software
+> or its use.
+>
+> You are solely responsible for ensuring that any use complies with applicable laws
+> and regulations and that you have obtained the necessary authorization. Unauthorized
+> interception, decryption, or impersonation of communications is illegal in most
+> jurisdictions.
 
 ## 7. 参考
 
