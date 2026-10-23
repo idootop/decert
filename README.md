@@ -134,26 +134,19 @@ Get-ChildItem Cert:\LocalMachine\Root | Where-Object Subject -like '*emSign*'
 
 处置：移除该根或升级信任库；无法升级的设备使用证书固定（pinning）或 mTLS。
 
-> [!WARNING]
-> **Disclaimer**
->
-> This project is provided for authorized security research, education, and defensive
-> testing only. All hostnames are under the reserved `*.decert.test` domain, and all
-> certificates are generated locally; the project does not connect to any live service.
->
-> The software is provided "as is", without warranty of any kind, express or implied,
-> including but not limited to the warranties of merchantability, fitness for a
-> particular purpose, and non-infringement. In no event shall the authors or copyright
-> holders be liable for any claim, damages, or other liability, whether in an action of
-> contract, tort, or otherwise, arising from, out of, or in connection with the software
-> or its use.
->
-> You are solely responsible for ensuring that any use complies with applicable laws
-> and regulations and that you have obtained the necessary authorization. Unauthorized
-> interception, decryption, or impersonation of communications is illegal in most
-> jurisdictions.
+## 7. 免责声明
 
-## 7. 参考
+本项目仅用于经授权的安全研究、教学与防御测试。所有域名位于保留域 `*.decert.test`，
+证书均由本地生成，不连接任何真实服务。
+
+软件按"原样"提供，不附带任何明示或暗示的担保，包括但不限于适销性、特定用途适用性和
+非侵权的担保。在任何情况下，作者或版权持有人均不对因本软件或其使用而产生的任何索赔、
+损害或其他责任负责，无论是基于合同、侵权还是其他原因。
+
+使用者需自行确保其使用符合适用法律法规，并已取得必要授权。未经授权的通信拦截、解密或
+冒充在多数司法管辖区均属违法行为。
+
+## 8. 参考
 
 - [Mozilla Security Blog：eMudhra intermediate certificates compromise](https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates/)
 - [Mozilla Bugzilla 2083449](https://bugzilla.mozilla.org/show_bug.cgi?id=2083449)
