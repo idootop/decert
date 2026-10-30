@@ -1,9 +1,9 @@
-# decert — Hunt legacy devices with broken trust anchors.
+# decert — eMudhra 中间 CA 证书弱私钥事件 PoC。
 .DEFAULT_GOAL := help
 SHELL := /bin/bash
 
 help:            ## 显示所有命令
-	@echo "decert — Hunt legacy devices with broken trust anchors."
+	@echo "decert — eMudhra 中间 CA 证书弱私钥事件 PoC。"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  make %-10s %s\n", $$1, $$2}'
 
@@ -35,4 +35,16 @@ clean: down      ## 连生成物一起删（证书、证据、临时文件）
 	rm -rf lab/cas evidence .pids .proxy.pid \
 		lab/mitm/mitmproxy-ca.pem lab/mitm/ca.key lab/mitm/mitmproxy-dhparam.pem lab/mitm/__pycache__
 
-.PHONY: help run pki show build attack test shell down clean
+check:           ## 静态检查：无私钥内容、仅实验域名
+	@echo "== 私钥扫描"
+	@if git --no-pager grep -nIE 'BEGIN (EC |RSA )?PRIVATE KEY' -- .; then \
+		echo "发现私钥内容"; exit 1; \
+	else echo "  ok"; fi
+	@echo "== 域名 allowlist"
+	@python3 lab/check_scope.py
+	@echo "== DNSName 字面量"
+	@if git --no-pager grep -nIE 'DNSName\("[^"]+"\)' -- lab | grep -vE '\.decert\.test"'; then \
+		echo "发现非实验域名"; exit 1; \
+	else echo "  ok"; fi
+
+.PHONY: help run pki show build attack test shell down clean check

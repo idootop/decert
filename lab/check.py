@@ -22,10 +22,13 @@
 退出码：0 = 攻击成功（接受/被骗），1 = 客户端拒绝
 """
 import hashlib
+import ipaddress
 import socket
 import ssl
 import sys
 from pathlib import Path
+
+from scope import require_lab_domain
 
 SCENARIOS = {
     "honest": ("site.decert.test", 8443),
@@ -41,6 +44,7 @@ COOKIE = "session=abc123"
 BEARER = "Bearer tok_live_xyz"
 REAL_BALANCE = "$0.00"
 EVIL_BALANCE = "$100.00"
+LAB_NET = ipaddress.ip_network("10.100.0.0/24")
 
 
 
@@ -92,6 +96,17 @@ def connect(host: str, port: int, target: str, via_proxy: bool) -> socket.socket
 def main() -> int:
     trust, scenario, target = sys.argv[1], sys.argv[2], sys.argv[3]
     host, port = SCENARIOS[scenario]
+    try:
+        require_lab_domain(host)
+    except ValueError as exc:
+        print(f"拒绝 | {scenario:<7} | {exc}")
+        return 1
+    try:
+        if ipaddress.ip_address(target) not in LAB_NET:
+            raise ValueError(f"目标不在实验网段：{target}")
+    except ValueError as exc:
+        print(f"拒绝 | {scenario:<7} | {exc}")
+        return 1
     via_proxy = scenario == "proxy"
     try:
         raw = connect(host, port, target, via_proxy)

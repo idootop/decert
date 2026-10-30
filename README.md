@@ -1,8 +1,8 @@
 # decert
 
-**Hunt legacy devices with broken trust anchors.**
+eMudhra 中间 CA 证书弱私钥事件的本地 PoC：还原私钥、伪造证书、演示 HTTPS 中间人。
 
-2026 年 10 月，印度证书机构 eMudhra 有 8 张中间 CA 证书的私钥过短，最小的仅等于整数 `4`。
+2026 年 10 月，印度证书机构 eMudhra 有 8 张中间 CA 证书的私钥过短，最小的仅为一个小于 256 的极小整数。
 这类私钥可直接从公开证书还原，进而为任意域名签发能通过正常校验的证书。
 
 `decert` 在本地复现这条攻击链：还原私钥、签发伪造证书、拦截并篡改 HTTPS 流量，
@@ -43,9 +43,9 @@ make down           # 清理
 
 以银行站点 `bank.decert.test` 为例：
 
-1. **还原私钥**：下载真实中间 CA 的公开证书，逐个尝试 `1` 到 `255`，命中 `4`。
+1. **还原私钥**：下载真实中间 CA 的公开证书，逐个尝试 `1` 到 `255`，命中一个极小整数（`make show` 会输出具体值）。
 2. **签发假证书**：用这把私钥为 `bank.decert.test` 签发证书。签发者在信任库中，客户端认它合法。
-3. **引流**：攻击者控制网络（公共 Wi-Fi、DNS 劫持、ARP 欺骗），让请求先到达攻击者机器。
+3. **引流**：攻击者控制客户端到站点的网络路径，让请求先到达攻击者机器。
 4. **客户端接受**：签名与域名校验全部通过，正常建立加密连接。
 5. **读改流量**：会话密钥由攻击者掌握，密码、Cookie、接口密钥均可被读取和篡改。
 
@@ -55,19 +55,22 @@ make down           # 清理
 decert/
 ├── decert.sh              CLI 入口：run / pki / build / attack / test / down
 ├── Makefile               常用命令（make 查看）
-├── data/real-ca/          事件涉及的公开证书（无任何私钥）
+├── data/real-ca/          事件涉及的公开证书；脆弱中间 CA 的私钥可由公开证书还原
 ├── images/                客户端与攻击者代理的容器镜像
 │   ├── client-old/        信任库保留 eMudhra 根
 │   ├── client-new/        信任库已移除该根
 │   └── proxy/             攻击者正向代理（mitmproxy）
 ├── lab/
 │   ├── pki.py             证书与信任库生成；--show 演示还原私钥
+│   ├── scope.py           PoC 作用域：只允许 *.decert.test
 │   ├── check.py           模拟客户端并核对三项证据
 │   ├── site/serve.py      最小 HTTPS 服务：真实站点 / 中间人 / 伪造页
 │   └── mitm/addon.py      mitmproxy 插件：记录明文并改写响应
 ├── evidence/              运行结果（已 gitignore）
 └── lab/cas/               运行时生成的证书（已 gitignore）
 ```
+
+PoC 提供的签发与代理入口都强制 `*.decert.test` allowlist（`lab/scope.py`）；`make check` 会扫描私钥内容和非实验域名。
 
 ## 5. 命令行
 
@@ -81,6 +84,7 @@ make test     # 只跑对照矩阵（需先 make attack）
 make shell    # 进入旧客户端容器
 make down     # 停止并清理
 make clean    # 连生成物一起删除
+make check    # 静态检查：无私钥、仅实验域名
 ```
 
 攻击面启动后的三个入口（容器网络 `decert`，`10.100.0.0/24`）：
@@ -104,42 +108,15 @@ make clean    # 连生成物一起删除
 | 2026-10-18 | `certifi` 移除该根 |
 | 2026-10-20 | Mozilla 从 NSS 信任库移除该根 |
 
-**受影响**：macOS、iOS、Android，以及 JDK / Kotlin / Gradle（自带 `cacerts`）——
-它们的信任库中仍有该根。旧版 Debian 12、旧版 `certifi`（`2026.10.18` 之前）同样在内。
-
-**不受影响**：Ubuntu、Alpine、Node.js、Rust（rustls）、Firefox，以及已升级的 `certifi`。
-
-**跟随系统**：Go、Dart / Flutter、curl 使用系统信任库，状态取决于所在平台；
-Windows 随系统更新下发，需逐机确认。
-
-自查方法：在该平台搜索信任库中是否存在 `emSign ECC Root CA - G3`。
-
-```bash
-# Linux
-awk '/BEGIN CERT/{n++} {print > ("/tmp/q" n ".pem")}' /etc/ssl/certs/ca-certificates.crt
-for f in /tmp/q*.pem; do openssl x509 -in $f -noout -subject | grep -q 'emSign ECC Root CA - G3' && echo 受影响; done
-
-# Python
-python3 -c "import certifi,re;b=open(certifi.where()).read();print('受影响' if re.search('emSign ECC Root CA - G3',b) else '不受影响')"
-
-# Java / Kotlin / Gradle
-keytool -list -keystore "$JAVA_HOME/lib/security/cacerts" -storepass changeit | grep -i emsign
-
-# macOS
-security find-certificate -a -c emSign /System/Library/Keychains/SystemRootCertificates.keychain
-
-# Windows (PowerShell)
-Get-ChildItem Cert:\LocalMachine\Root | Where-Object Subject -like '*emSign*'
-```
-
-处置：移除该根或升级信任库；无法升级的设备使用证书固定（pinning）或 mTLS。
+时间线、受影响范围和修复情况，详见 [emudhra.we-have-a-problem.com](https://emudhra.we-have-a-problem.com/)。
 
 ## 7. 免责声明
 
-本项目仅供安全学习与防御研究使用。所有域名位于 `*.decert.test`，证书均由本地生成，
-不连接任何真实网站。
+本项目仅供安全学习与防御研究使用。实验域名均位于 `*.decert.test`，攻击链在本地容器内
+闭环，不连接任何真实网站。`data/real-ca/` 仅含公开证书，不含私钥文件；其中脆弱中间 CA
+的私钥可由公开证书直接还原，这正是本 PoC 演示的攻击面。
 
-严禁将本项目代码、证书材料（尤其是 `data/real-ca/` 中的真实 eMudhra 证书）或衍生工具
+严禁将本项目代码、证书材料或衍生工具
 用于对他人系统、网络、网站进行未授权的攻击、测试、伪造或监听。
 
 **使用本项目的全部风险与责任由使用者自行承担。** 使用者须自行确保其行为符合所在

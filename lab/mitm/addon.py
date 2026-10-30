@@ -4,9 +4,14 @@
 这就是"中间人看到了明文"的直接证据。
 """
 import os
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from mitmproxy import http
+
+from scope import require_lab_domain
 
 LOG = os.environ.get("MITM_LOG") or str(
     Path("/lab/evidence/mitm-plaintext.txt") if Path("/lab/evidence").exists()
@@ -19,7 +24,27 @@ def _write(line: str) -> None:
         f.write(line + "\n")
 
 
+def _allow(flow: http.HTTPFlow) -> bool:
+    try:
+        require_lab_domain(flow.request.host)
+        return True
+    except ValueError:
+        _write(f"!!! 拒绝非实验域名 {flow.request.host}")
+        flow.response = http.Response.make(
+            403, b"decert: only *.decert.test is allowed\n",
+            {"Content-Type": "text/plain"},
+        )
+        return False
+
+
+def http_connect(flow: http.HTTPFlow) -> None:
+    """在 CONNECT 阶段拒绝非实验域名，避免为真实域名签发伪造证书。"""
+    _allow(flow)
+
+
 def request(flow: http.HTTPFlow) -> None:
+    if not _allow(flow):
+        return
     _write(f">>> {flow.request.method} {flow.request.pretty_url}")
     for key in ("Cookie", "Authorization", "X-Password"):
         if key in flow.request.headers:

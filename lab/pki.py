@@ -25,6 +25,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
+from scope import require_lab_domain
+
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "lab" / "cas"
 REAL = ROOT / "data" / "real-ca"
@@ -69,8 +71,9 @@ def builder(subject, issuer, pub, days, ca, pathlen=None, issuer_pub=None):
 
 
 def server(b, *domains):
+    names = [require_lab_domain(d) for d in domains]
     return b.add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False) \
-            .add_extension(x509.SubjectAlternativeName([x509.DNSName(d) for d in domains]), critical=False)
+            .add_extension(x509.SubjectAlternativeName([x509.DNSName(d) for d in names]), critical=False)
 
 
 def save(path: Path, *parts: bytes) -> None:
@@ -94,8 +97,9 @@ def recover_d(cert_pem: bytes):
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    real_ca = x509.load_pem_x509_certificate((REAL / "em-ov-tls-ca-g3c.pem").read_bytes())
-    real_chain = (REAL / "g3-intermediates.pem").read_bytes()
+    real_bundle = (REAL / "em-ov-tls-ca-g3c.pem").read_bytes()
+    real_ca = x509.load_pem_x509_certificate(real_bundle)
+    real_chain = real_bundle
 
     print("[1] 本地 CA")
     root_key = ec.generate_private_key(ec.SECP384R1())
